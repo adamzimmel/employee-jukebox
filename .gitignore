@@ -1,0 +1,11 @@
+# songs, playlist and removed list — never commit these
+data/
+
+# your local settings
+jukebox.env
+
+# junk
+node_modules/
+.DS_Store
+.playwright-cli/
+*.log

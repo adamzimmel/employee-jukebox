@@ -1,0 +1,9 @@
+{
+  "name": "employee-jukebox",
+  "version": "1.0.0",
+  "description": "Anonymous shared YouTube jukebox that plays 24/7",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "license": "GPL-3.0-or-later"
+}

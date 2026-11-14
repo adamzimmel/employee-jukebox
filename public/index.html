@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Employee Jukebox</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='black'/><g fill='white'><rect x='103' y='200' width='20' height='108'/><rect x='150' y='231' width='20' height='46'/><rect x='197' y='171' width='20' height='170'/><rect x='242' y='76' width='20' height='361'/><rect x='288' y='194' width='20' height='104'/><rect x='335' y='171' width='20' height='170'/><rect x='382' y='231' width='20' height='46'/></g></svg>">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --frost: #ffffff;
+    --panel: #ffffff;
+    --ink: #000000;
+    --slate: #5c6666;
+    --rule: #dbe3e2;
+    --mint: #b1e1de;
+    --mint-soft: #eef7f6;
+    --pine: #000000;
+    --pine-hover: #2e2e2e;
+    --holly: #c4352a;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--frost);
+    color: var(--ink);
+    font: 16px/1.5 Jost, "Century Gothic", system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  .skip { position: absolute; left: -9999px; top: 8px; background: var(--ink); color: #fff; padding: 8px 12px; border-radius: 6px; z-index: 10; }
+  .skip:focus { left: 16px; }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+  }
+
+  header.brand { display: flex; height: 112px; }
+  .mark-box { flex: none; width: 112px; background: #000; display: grid; place-items: center; }
+  .wave { width: 92px; height: 92px; display: block; }
+  .wave rect { fill: #fff; }
+  .band { flex: 1; min-width: 0; background: var(--mint); display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; }
+  .word { margin: 0; font-size: 34px; font-weight: 500; letter-spacing: -0.01em; line-height: 1; white-space: nowrap; }
+  .air { font-size: 14px; text-align: right; font-variant-numeric: tabular-nums; }
+  .air .live { display: block; font-weight: 600; }
+
+  /* the logo waveform rests at full size; while music plays, script drives it from the audio */
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 40px; margin-top: 28px; align-items: start; }
+
+  /* ---------- now playing ---------- */
+  .screen { position: relative; aspect-ratio: 16 / 9; background: var(--ink); border-radius: 0; overflow: hidden; }
+  #art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #art[hidden] { display: none; }
+  #tunein { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: var(--ink); color: #fff; text-align: center; padding: 16px; }
+  #tunein p { margin: 12px 0 0; color: #b9c4c3; font-size: 14px; }
+
+  .now-title {
+    margin: 22px 0 0;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.08;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  .now-by { margin: 6px 0 0; color: var(--slate); font-size: 17px; }
+  .now-by .yt { margin-left: 8px; font-size: 14px; color: var(--slate); }
+  .now-by .yt:hover { color: var(--ink); }
+  .now-ded { margin: 10px 0 0; padding-left: 12px; border-left: 4px solid var(--mint); font-size: 15px; }
+  .now-ded:empty { display: none; }
+
+  .progress { margin-top: 20px; height: 4px; background: var(--mint); border-radius: 0; overflow: hidden; }
+  .progress div { height: 100%; width: 0; background: var(--pine); transition: width 1s linear; }
+  .times { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; color: var(--slate); font-variant-numeric: tabular-nums; }
+
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .vol { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--slate); }
+  .vol input { width: 120px; accent-color: var(--pine); }
+  .controls .spacer { flex: 1; }
+
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 0;
+    padding: 12px 18px;
+    cursor: pointer;
+    touch-action: manipulation;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+    transition: background-color .15s, border-color .15s;
+  }
+  button:hover { border-color: var(--slate); }
+  button:disabled { opacity: .55; cursor: default; }
+  button:disabled:hover { border-color: var(--rule); }
+  button.primary { background: var(--pine); border-color: var(--pine); color: #fff; }
+  button.primary:hover { background: var(--pine-hover); border-color: var(--pine-hover); }
+  button.big { font-size: 17px; padding: 14px 24px; }
+  :focus-visible { outline: 3px solid #2a8f88; outline-offset: 2px; }
+  #tunein :focus-visible { outline-color: var(--mint); }
+  #tunein button.primary { background: var(--mint); border-color: var(--mint); color: #000; }
+  #tunein button.primary:hover { background: #fff; border-color: #fff; }
+
+  /* ---------- side column ---------- */
+  .side h2 { font-size: 15px; font-weight: 700; margin: 0 0 12px; }
+  .order-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .order-head h2 { margin: 0; }
+  button.small { font-size: 13px; padding: 7px 12px; }
+  .now-by .added, .order .added { color: var(--slate); }
+  form.add { background: var(--mint-soft); padding: 18px; }
+  .field { display: grid; gap: 4px; margin-bottom: 10px; }
+  .field label { font-size: 13px; font-weight: 600; }
+  .field input {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    padding: 10px 12px;
+  }
+  .field input:hover { border-color: var(--slate); }
+  .field .hint { font-size: 13px; color: var(--slate); }
+  .add .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #msg { font-size: 14px; }
+  #msg.err { color: var(--holly); }
+  #msg.ok { color: #000; font-weight: 500; }
+  #msg.warn { display: block; margin-top: 4px; padding: 10px 12px; background: #fff4d6; border-left: 4px solid #c98a00; color: #4a3300; font-size: 14px; }
+
+  .order { margin-top: 28px; }
+  .order ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  .order li { display: grid; grid-template-columns: 4.6em minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+  .order .at { font-size: 14px; color: var(--slate); font-variant-numeric: tabular-nums; }
+  .order .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .order .by { font-size: 14px; color: var(--slate); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .order .ded { font-size: 14px; margin-top: 2px; overflow-wrap: anywhere; }
+  .order .len { font-size: 14px; color: var(--slate); font-variant-numeric: tabular-nums; }
+  .order .end { display: grid; justify-items: end; gap: 6px; }
+  .order .btns { display: flex; gap: 6px; }
+  .order .rm { font-size: 13px; font-weight: 600; padding: 6px 10px; border: 1px solid var(--rule); background: #fff; color: var(--ink); }
+  .order .rm:hover { border-color: var(--ink); }
+  .order .new { display: inline-block; margin-left: 8px; padding: 1px 6px; font-size: 12px; font-weight: 600; background: var(--mint); vertical-align: 2px; }
+  .order .note { margin: 12px 0 0; font-size: 14px; color: var(--slate); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--slate); max-width: 68ch; }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  }
+  @media (max-width: 600px) {
+    header.brand { height: 76px; }
+    .mark-box { width: 76px; }
+    .wave { width: 64px; height: 64px; }
+    .band { padding: 0 14px; }
+    .word { font-size: 24px; }
+          .air { font-size: 13px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .progress div { transition: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#add">Skip to Add a Song</a>
+<div class="wrap">
+  <header class="brand">
+    <div class="mark-box" aria-hidden="true">
+      <svg class="wave" viewBox="0 0 512 512">
+        <rect x="103" y="200" width="20" height="108"/>
+        <rect x="150" y="231" width="20" height="46"/>
+        <rect x="197" y="171" width="20" height="170"/>
+        <rect x="242" y="76" width="20" height="361"/>
+        <rect x="288" y="194" width="20" height="104"/>
+        <rect x="335" y="171" width="20" height="170"/>
+        <rect x="382" y="231" width="20" height="46"/>
+      </svg>
+    </div>
+    <div class="band">
+      <p class="word">Employee Jukebox</p>
+      <div class="air">
+        <span class="live" id="liveText">Off air</span>
+        <span id="stats"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section aria-labelledby="nowTitle">
+      <div class="screen">
+        <img id="art" alt="" width="480" height="360" hidden>
+        <div id="tunein">
+          <div>
+            <button class="primary big" id="tuneBtn" type="button">Start Listening</button>
+            <p>Tune in to the live station. Everyone hears the same thing at the same time.</p>
+          </div>
+        </div>
+      </div>
+
+      <h1 class="now-title" id="nowTitle">Nothing playing yet</h1>
+      <p class="now-by"><span id="nowAuthor">Add the first song to start the station.</span> <a id="ytLink" class="yt" href="#" target="_blank" rel="noopener" hidden>Watch on YouTube</a></p>
+      <p class="now-ded" id="nowDedication"></p>
+
+      <div class="progress" aria-hidden="true"><div id="progress"></div></div>
+      <div class="times"><span id="elapsed"></span><span id="remaining"></span></div>
+
+      <div class="controls">
+        <button type="button" id="muteBtn" aria-pressed="false">Mute</button>
+        <label class="vol" for="vol">Volume <input type="range" id="vol" name="volume" min="0" max="100" value="80"></label>
+        <span class="spacer"></span>
+        <button type="button" id="skipBtn">Skip</button>
+        <button type="button" id="removeBtn">Remove Song</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <form class="add" id="add" novalidate>
+        <h2>Add a Song</h2>
+        <div class="field">
+          <label for="link">YouTube link</label>
+          <input type="text" id="link" name="youtube-link" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://youtu.be/…">
+        </div>
+        <div class="field">
+          <label for="dedication">Message (optional)</label>
+          <input type="text" id="dedication" name="dedication" maxlength="80" autocomplete="off" aria-describedby="msgHint" placeholder="Happy Friday, everyone…">
+          <span class="hint" id="msgHint">Shows on screen while your song plays. No name attached.</span>
+        </div>
+        <div class="row">
+          <button class="primary" id="addBtn" type="submit">Add Song</button>
+          <span id="msg" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section class="order" aria-labelledby="upNextHead">
+        <div class="order-head"><h2 id="upNextHead">Up Next</h2><button type="button" id="shuffleBtn" class="small">Shuffle</button></div>
+        <ol id="upNext"></ol>
+        <p class="note" id="loopNote"></p>
+      </section>
+    </aside>
+  </main>
+
+  <footer>Anyone with the link can add or remove songs, and nothing about who did what is kept. New songs play first; when they run out, the whole playlist shuffles and keeps going.</footer>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

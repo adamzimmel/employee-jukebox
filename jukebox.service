@@ -1,0 +1,40 @@
+[Unit]
+Description=Employee Jukebox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=jukebox
+Group=jukebox
+WorkingDirectory=/opt/jukebox
+ExecStart=/usr/bin/node /opt/jukebox/server.js
+EnvironmentFile=/opt/jukebox/jukebox.env
+Restart=always
+RestartSec=3
+
+# Sandboxing: the app can only write to its own data folder
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/jukebox/data
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+UMask=0077
+LimitNOFILE=4096
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target
